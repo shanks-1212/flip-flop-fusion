@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flip Flop Fusion - ACM VIDYUT PROJECT EXPO</title>
+    <link rel="icon" type="image/png" href="acm.jpeg">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="cont">
+        <div class="header">
+            <img src="acm.jpeg" alt="ACM Logo" class="logo">
+            <div class="title-container">
+                <h1 class="expo-title">ACM VIDYUT PROJECT EXPO</h1>
+                <h1 class="project-title">FLIP FLOP FUSION</h1>
+            </div>
+            <img src="vidyut.png" alt="Vidyut Logo" class="logo">
+        </div>
+
+        <div class="card">
+            <h2>Give Set, Reset, and Q Inputs (S, R, Q):</h2>
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="s1">Set input (S):</label>
+                    <input type="number" id="s1" value="1" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="r1">Reset input (R):</label>
+                    <input type="number" id="r1" value="1" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="q1">Current State (Q):</label>
+                    <input type="number" id="q1" value="0" min="0" max="1">
+                </div>
+            </div>
+
+            <button id="convert-btn" onclick="convert()" class="pulse">Convert to JK</button>
+        </div>
+
+        <div id="jk-result" class="card"></div>
+        
+        <div class="card" id="image-output"></div>
+        
+        <div class="card" id="mixed-signal-section">
+            <h3>Mixed Signal Output</h3>
+            <button id="show-mixed-signal-btn">Show Mixed Signal Output</button>
+            <div id="mixed-signal-image" style="display: none;">
+                <img src="op.jpg" alt="Mixed Signal Output" class="result-image">
+            </div>
+        </div>
+
+        <div class="card" id="verilog-output">
+            <h3>Generated Verilog Code</h3>
+            <pre id="verilog-code"></pre>
+        </div>
+    </div>
+
+    <script>
+       function convert() {
+            // Get input values
+            let s = parseInt(document.getElementById('s1').value);
+            let r = parseInt(document.getElementById('r1').value);
+            let q = parseInt(document.getElementById('q1').value);
+            
+            // Validate inputs
+            if (isNaN(s) || isNaN(r) || isNaN(q) || s > 1 || s < 0 || r > 1 || r < 0 || q > 1 || q < 0) {
+                alert("Please enter valid binary values (0 or 1)");
+                return;
+            }
+
+            // Calculate JK values
+            let j, k, imageSrc;
+            if (s === 0 && r === 0) {
+                j = 0; k = 0;
+                imageSrc = "sr_00.jpg";  // Image when S=0 and R=0
+            } else if (s === 0 && r === 1) {
+                j = 0; k = 1;
+                imageSrc = "sr_01.png";  // Image when S=0 and R=1
+            } else if (s === 1 && r === 0) {
+                j = 1; k = 0;
+                imageSrc = "sr_10.jpg";  // Image when S=1 and R=0
+            } else {
+                j = 1; k = 1;
+                imageSrc = "sr_11.png";  // Image when S=1 and R=1
+            }
+
+            // Calculate next state
+            let nextQ;
+            if (j === 0 && k === 0) nextQ = q;
+            else if (j === 0 && k === 1) nextQ = 0;
+            else if (j === 1 && k === 0) nextQ = 1;
+            else nextQ = q === 0 ? 1 : 0;
+
+            // JK Output with styled format
+            const jkResult = document.getElementById('jk-result');
+            jkResult.innerHTML = `
+                <div class="result-row">J = <span class="highlight">${j}</span></div>
+                <div class="result-row">K = <span class="highlight">${k}</span></div>
+                <div class="result-row">Current Q = <span class="highlight">${q}</span></div>
+                <div class="result-row">Next Q = <span class="highlight">${nextQ}</span></div>
+            `;
+            
+            // Add fade-in effect
+            jkResult.classList.add('fade-in');
+            setTimeout(() => {
+                jkResult.classList.remove('fade-in');
+            }, 1000);
+
+            // Updated Verilog Code with dynamic S and R
+            let verilogCode = `// Verilog Code for Flip-Flop Implementation
+module logic_combiner (output logic res, input logic x, input logic y);
+    assign res = x & y;  // AND operation
+endmodule
+
+module top (
+    input logic clk,
+    input logic reset,
+    input logic [31:0] cycle_count,
+    output logic test_passed,
+    output logic test_failed
+);
+    logic sr_s = ${s}, sr_r = ${r}, sr_q;
+    logic digital_s, digital_r;
+    logic jk_q, j, k;
+
+    // Analog to digital conversion
+    assign digital_s = (sr_s > 1'b0) ? 1'b1 : 1'b0;
+    assign digital_r = (sr_r > 1'b0) ? 1'b1 : 1'b0;
+
+    // SR Flip-Flop Logic
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset)
+            sr_q <= 0;
+        else if (digital_s & ~digital_r)
+            sr_q <= 1;
+        else if (~digital_s & digital_r)
+            sr_q <= 0;
+    end
+
+    // Converting SR Flip-Flop to JK Flip-Flop behavior
+    assign j = digital_s;
+    assign k = digital_r;
+
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset)
+            jk_q <= 0;
+        else if (j & ~k)
+            jk_q <= 1;
+        else if (~j & k)
+            jk_q <= 0;
+        else if (j & k)
+            jk_q <= ~jk_q;
+    end
+
+    // Test logic based on JK flip-flop output
+    assign test_passed = jk_q;
+    assign test_failed = ~jk_q;
+endmodule`;
+
+            document.getElementById('verilog-code').textContent = verilogCode;
+
+            // Image Output with animation class
+            document.getElementById('image-output').innerHTML = `
+                <h3>State Diagram</h3>
+                <img src="${imageSrc}" alt="SR to JK Flip-Flop Case" class="result-image">
+            `;
+            document.getElementById('image-output').classList.add('fade-in');
+        }
+
+        // Add event listener for the mixed signal button
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mixed signal button functionality
+            document.getElementById('show-mixed-signal-btn').addEventListener('click', function() {
+                const mixedSignalImage = document.getElementById('mixed-signal-image');
+                if (mixedSignalImage.style.display === 'none') {
+                    mixedSignalImage.style.display = 'block';
+                    this.textContent = 'Hide Mixed Signal Output';
+                    mixedSignalImage.classList.add('fade-in');
+                } else {
+                    mixedSignalImage.style.display = 'none';
+                    this.textContent = 'Show Mixed Signal Output';
+                }
+            });
+
+            // Add pulse effect to the convert button
+            const convertBtn = document.getElementById('convert-btn');
+            convertBtn.addEventListener('mouseover', function() {
+                this.classList.add('pulse');
+            });
+            
+            convertBtn.addEventListener('mouseout', function() {
+                this.classList.remove('pulse');
+            });
+        });
+    </script>
+</body>
+</html>
